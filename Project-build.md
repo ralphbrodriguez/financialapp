@@ -13,3 +13,4 @@ move typss folder from assests outside
 move tailwind.config.ts from assests outside
 remove page.tsx from app/ folder
 create new folder (root) and create page.tsx and layout.tsx inside this folder
+npm install tailwindcss-animate
