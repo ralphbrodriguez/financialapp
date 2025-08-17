@@ -14,3 +14,11 @@ move tailwind.config.ts from assests outside
 remove page.tsx from app/ folder
 create new folder (root) and create page.tsx and layout.tsx inside this folder
 npm install tailwindcss-animate
+
+note: globals.css needs to be updated to support new Next.js
+npm install tailwind
+npm install -D tailwindcss postcss autoprefixer
+npm install query-string
+npm install react-countup
+npm install chart.js
+npm install react-chartjs-2
