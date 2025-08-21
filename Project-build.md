@@ -24,3 +24,11 @@ npm install chart.js
 npm install react-chartjs-2
 
 npx shadcn@latest add sheet
+
+npm install zod
+npx shadcn@latest add sheet
+npx shadcn@latest add form
+npx shadcn@latest add input
+
+
+
