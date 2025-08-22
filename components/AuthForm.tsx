@@ -22,13 +22,13 @@ import CustomInput from './CustomInput'
 import { authFormSchema } from '@/lib/utils'
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp } from '@/lib/actions/user.actions';
-
-
+import { getLoggedInUser, signIn, signUp } from '@/lib/actions/user.actions';
+import { get } from 'http';
+//import PlaidLink from './PlaidLink';
 const AuthForm = ({ type }:{ type: string }) => {
     const router = useRouter();
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);    
  
     const formSchema = authFormSchema(type);
 
@@ -43,14 +43,26 @@ const AuthForm = ({ type }:{ type: string }) => {
 
    // 2. Define a submit handler.
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
+      setIsLoading(true);
 
-    try {
+      try {
         // Sign up with Appwrite & create plaid token
-        
+                
         if(type === 'sign-up') {
+          const userData = {
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            address1: data.address1!,
+            city: data.city!,
+            state: data.state!,
+            postalCode: data.postalCode!,
+            dateOfBirth: data.dateOfBirth!,
+            ssn: data.ssn!,
+            email: data.email,
+            password: data.password
+          }
 
-       const newUser = await signUp(data);
+          const newUser = await signUp(userData);
 
           setUser(newUser);
         }
@@ -92,8 +104,10 @@ const AuthForm = ({ type }:{ type: string }) => {
                 </h1>
                 <p className='text-16 font-normal text-gray-600'>
                     {user
-                    ? 'Link your account to get started.'
-                    : 'Please enter your details.'}
+                      ? 'Link your account to get started.'
+                      : type === 'sign-up'
+                        ? 'Link your account to get started.'
+                        : 'Please enter your details.'}
                 </p>
             </div>
       </header>
@@ -110,25 +124,25 @@ const AuthForm = ({ type }:{ type: string }) => {
               {type === 'sign-up' && (
                 <>
                   <div className="flex gap-4">
-                    <CustomInput control={form.control} name='firstName' label="First Name" placeholder='Enter your first name' />
-                    <CustomInput control={form.control} name='lastName' label="Last Name" placeholder='Enter your first name' />
+                    <CustomInput control={form.control} name='firstName' label="First Name" placeholder='Enter your first name' autoComplete='given-name' />
+                    <CustomInput control={form.control} name='lastName' label="Last Name" placeholder='Enter your last name' autoComplete='family-name' />
                   </div>
-                    <CustomInput control={form.control} name='address1' label="Address" placeholder='Enter your specific address' />
-                    <CustomInput control={form.control} name='city' label="City" placeholder='Enter your city' />
+                    <CustomInput control={form.control} name='address1' label="Address" placeholder='Enter your specific address' autoComplete='street-address' />
+                    <CustomInput control={form.control} name='city' label="City" placeholder='Enter your city' autoComplete='address-level2' />
                   <div className="flex gap-4">
-                    <CustomInput control={form.control} name='state' label="State" placeholder='Example: NY' />
-                    <CustomInput control={form.control} name='postalCode' label="Postal Code" placeholder='Example: 11101' />
+                    <CustomInput control={form.control} name='state' label="State" placeholder='Example: NY' autoComplete='address-level1' />
+                    <CustomInput control={form.control} name='postalCode' label="Postal Code" placeholder='Example: 11101' autoComplete='postal-code' inputMode='numeric' />
                   </div>
                   <div className="flex gap-4">
-                    <CustomInput control={form.control} name='dateOfBirth' label="Date of Birth" placeholder='YYYY-MM-DD' />
-                    <CustomInput control={form.control} name='ssn' label="SSN" placeholder='Example: 1234' />
+                    <CustomInput control={form.control} name='dateOfBirth' label="Date of Birth" placeholder='YYYY-MM-DD' autoComplete='bday' />
+                    <CustomInput control={form.control} name='ssn' label="SSN" placeholder='Example: 1234' autoComplete='off' inputMode='numeric' />
                   </div>
                 </>
               )}
 
-              <CustomInput control={form.control} name='email' label="Email" placeholder='Enter your email' />
+              <CustomInput control={form.control} name='email' label="Email" placeholder='Enter your email' type='email' autoComplete='email' />
 
-              <CustomInput control={form.control} name='password' label="Password" placeholder='Enter your password' />
+              <CustomInput control={form.control} name='password' label="Password" placeholder='Enter your password' type='password' autoComplete={type === 'sign-in' ? 'current-password' : 'new-password'} />
               &nbsp;
               
               <div className="flex flex-col gap-4">
