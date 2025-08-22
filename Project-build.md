@@ -30,5 +30,7 @@ npx shadcn@latest add sheet
 npx shadcn@latest add form
 npx shadcn@latest add input
 
+npm install node-appwrite
+
 
 
