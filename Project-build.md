@@ -32,5 +32,9 @@ npx shadcn@latest add input
 
 npm install node-appwrite
 
+npm install react-plaid-link
+npm install plaid
+npm install dwolla-v2
+
 
 

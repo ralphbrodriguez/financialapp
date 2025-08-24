@@ -24,7 +24,8 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getLoggedInUser, signIn, signUp } from '@/lib/actions/user.actions';
 import { get } from 'http';
-//import PlaidLink from './PlaidLink';
+import PlaidLink from './PlaidLink';
+
 const AuthForm = ({ type }:{ type: string }) => {
     const router = useRouter();
     const [user, setUser] = useState(null);
@@ -36,6 +37,14 @@ const AuthForm = ({ type }:{ type: string }) => {
     const form = useForm<z.infer<typeof formSchema>>({
       resolver: zodResolver(formSchema),
       defaultValues: {
+        firstName: '',
+        lastName: '',
+        address1: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        dateOfBirth: '',
+        ssn: '',
         email: "",
         password: '',
       },
@@ -111,12 +120,11 @@ const AuthForm = ({ type }:{ type: string }) => {
                 </p>
             </div>
       </header>
-      {user
-      ? (
+      {user? (
         <div className='flex flex-col gap-4'>
-            {/* PlaidLink */}
+             <PlaidLink user={user} variant="primary"/>
         </div>   
-      ): (
+      ) : (
         <>
            <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

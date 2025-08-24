@@ -625,13 +625,45 @@
 }
 
 /* PlaidLink */
-.plaidlink-primary {
+/* Plaid primary button (aliases include historical casing / typo) */
+.plaidlink-primary,
+.plaidLink-primary,
+.plaidLink-primaty { /* alias for potential typo */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   font-size: 16px;
   line-height: 24px;
-  border-radius: 0.5rem;
-  border: 1px solid;
   font-weight: 600;
-  color: white;
+  padding: 0.875rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background: linear-gradient(90deg, #0179FE 0%, #4893FF 100%);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.plaidlink-primary:hover,
+.plaidLink-primary:hover,
+.plaidLink-primaty:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+.plaidlink-primary:active,
+.plaidLink-primary:active,
+.plaidLink-primaty:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.plaidlink-primary:focus-visible,
+.plaidLink-primary:focus-visible,
+.plaidLink-primaty:focus-visible {
+  outline: 3px solid rgba(1,121,254,0.35);
+  outline-offset: 2px;
 }
 
 .plaidlink-ghost {
