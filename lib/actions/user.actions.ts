@@ -277,8 +277,13 @@ export const getBank = async ({ documentId }: getBankProps) => {
       [Query.equal('$id', [documentId])]
     )
 
+    if (bank.documents.length === 0) {
+      throw new Error(`No bank found with documentId: ${documentId}`);
+    }
+
     return parseStringify(bank.documents[0]);
   } catch (error) {
-    console.log(error)
+    console.log(error);
+    return null;
   }
 }

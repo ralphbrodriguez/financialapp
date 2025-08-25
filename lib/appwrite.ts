@@ -14,9 +14,12 @@ export async function createSessionClient() {
   const cookieStore = await cookies();
   const session = cookieStore.get("appwrite-session");
 
+  console.log("Retrieved session from cookies:", session);
+
   if (!session || !session.value) {
     throw new Error("No session");
   }
+  console.log("Setting session on Appwrite client:", session.value);
 
   client.setSession(session.value);
 
