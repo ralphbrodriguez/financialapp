@@ -21,8 +21,24 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     // get banks from db
     const banks = await getBanks({ userId });
 
+    console.log("Retrieved banks from database:", banks);
+
+    if (!banks || banks.length === 0) {
+      return {
+        data: [],
+        totalBanks: 0,
+        totalCurrentBalance: 0,
+      };
+    }
+
     const accounts = await Promise.all(
       banks?.map(async (bank: Bank) => {
+        // Check if bank has accessToken before using it
+        if (!bank?.accessToken) {
+          console.log('Bank missing accessToken:', bank);
+          return null;
+        }
+
         // get each account info from plaid
         const accountsResponse = await plaidClient.accountsGet({
           access_token: bank.accessToken,
@@ -48,16 +64,21 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
           shareableId: bank.shareableId,
         };
 
+        console.log('appwriteItemId from bank.#id:', bank.$id);
+
         return account;
       })
     );
 
-    const totalBanks = accounts.length;
-    const totalCurrentBalance = accounts.reduce((total, account) => {
+    // Filter out null accounts (banks without accessToken)
+    const validAccounts = accounts.filter(account => account !== null);
+
+    const totalBanks = validAccounts.length;
+    const totalCurrentBalance = validAccounts.reduce((total, account) => {
       return total + account.currentBalance;
     }, 0);
 
-    return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
+    return parseStringify({ data: validAccounts, totalBanks, totalCurrentBalance });
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
   }
@@ -70,6 +91,12 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     const bank = await getBank({ documentId: appwriteItemId });
 
     console.log('bank:', bank);
+
+    // Check if bank exists and has accessToken
+    if (!bank || !bank.accessToken) {
+      console.log('Bank not found or missing accessToken:', { appwriteItemId, bank });
+      return null;
+    }
 
     // get account info from plaid
     const accountsResponse = await plaidClient.accountsGet({
@@ -117,7 +144,7 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     };
 
     // sort transactions by date such that the most recent transaction is first
-      const allTransactions = [...transactions, ...transferTransactions].sort(
+    const allTransactions = [...transactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 

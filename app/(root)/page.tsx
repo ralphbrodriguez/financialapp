@@ -5,7 +5,8 @@ import TotalBalanceBox from '@/components/TotalBalanceBox';
 import { getAccount, getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
 
-const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
+const Home = async ({ searchParams }: SearchParamProps) => {
+  const { id, page } = await searchParams;
   const currentPage = Number(page as string) || 1;
   const loggedIn = await getLoggedInUser();
   const accounts = await getAccounts({ 
@@ -15,9 +16,11 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
   if(!accounts) return;
   
   const accountsData = accounts?.data;
-  const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;
+  const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;  
+  console.log('Debug Info:', { loggedIn, accountsData, firstAccount: accountsData[0], accounts, appwriteItemId });
 
-  const account = await getAccount({ appwriteItemId })
+  // Only get account if we have a valid appwriteItemId
+  const account = appwriteItemId ? await getAccount({ appwriteItemId }) : null;
 
   return (
     <section className="home">
@@ -35,7 +38,7 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
             totalBanks={accounts?.totalBanks}
             totalCurrentBalance={accounts?.totalCurrentBalance}
           />
-        </header>
+        </header>        
 
         <RecentTransactions 
           accounts={accountsData}
@@ -53,5 +56,4 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
     </section>
   )
 }
-
 export default Home
