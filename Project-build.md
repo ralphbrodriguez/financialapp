@@ -36,5 +36,7 @@ npm install react-plaid-link
 npm install plaid
 npm install dwolla-v2
 
+npm install @radix-ui/react-tabs
+
 
 
