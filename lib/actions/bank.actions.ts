@@ -11,7 +11,6 @@ import {
 
 import { plaidClient } from "../plaid";
 import { parseStringify } from "../utils";
-
 //import { getTransactionsByBankId } from "./transaction.actions";
 import { getBanks, getBank } from "./user.actions";
 
@@ -79,6 +78,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     }, 0);
 
     return parseStringify({ data: validAccounts, totalBanks, totalCurrentBalance });
+    s
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
   }
