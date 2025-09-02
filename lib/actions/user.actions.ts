@@ -53,16 +53,8 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
     if(!newUserAccount) throw new Error('Error creating user')
 
     const dwollaCustomerUrl = await createDwollaCustomer({
-      firstName: firstName!,
-      lastName: lastName!,
-      email: email,
-      type: 'personal',
-      address1: userData.address1!,
-      city: userData.city!,
-      state: userData.state?.toUpperCase(),
-      postalCode: userData.postalCode!,
-      dateOfBirth: userData.dateOfBirth!,
-      ssn: userData.ssn?.slice(-4)!,
+      ...userData,
+      type: 'personal'
     })
 
     if(!dwollaCustomerUrl) throw new Error('Error creating Dwolla customer')
@@ -99,36 +91,89 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 export const getUserInfo = async ({ userId }: getUserInfoProps) => {
   try {
 
-    //console.log('Fetching user info for userId:', userId);
     const { database } = await createAdminClient();
-    //console.log('Database client initialized:', database);
 
     const user = await database.listDocuments(
       DATABASE_ID!,
       USER_COLLECTION_ID!,
       [Query.equal('userId', [userId])]
     )
-    //console.log('user values', user);
+    console.log('userId', userId);
+    console.log('Fetched user documents:', user.documents[0]);
 
     return parseStringify(user.documents[0]);
 
   } catch (error) {
     console.log('Error getUserInfo:', error);
+    return null;
   }
 }
 export async function getLoggedInUser() {
   try {
     const { account } = await createSessionClient();
+  
     const result = await account.get();
-    const user = await getUserInfo({ userId: result.$id})
-    //const user = await account.get();    
+    console.log('getLoggedInUser: User authenticated successfully');
+    
+    if (!result?.$id) {
+      console.log('No user ID found in account result');
+      return null;
+    }
+    
+    const user = await getUserInfo({ userId: result.$id});
+    
+    if (!user) {
+      console.log('No user found in database for userId:', result.$id);
+      return null;
+    }
 
     return parseStringify(user);
-  } catch (error) {
-    console.log(error)
+  } catch (error: any) {
+    // Handle session-related errors (expected for unauthenticated users)
+    if (error?.message?.includes('No session found') || 
+        error?.message?.includes('user needs to authenticate') ||
+        error?.message?.includes('No session')) {
+      console.log('No active session - user needs to sign in');
+      return null;
+    }
+    
+    // Handle specific authentication errors more quietly
+    if (error?.code === 401 || error?.type === 'general_unauthorized_scope') {
+      console.log('Session expired or invalid - redirecting to sign-in');
+      return null;
+    }
+    
+    // Log other unexpected errors (but less verbosely for expected auth issues)
+    if (error?.message?.includes('session') || error?.message?.includes('authenticate')) {
+      console.log('Authentication issue:', error?.message);
+    } else {
+      console.error('Unexpected error in getLoggedInUser:', error);
+    }
     return null;
   }
 }
+
+// Server Action to clear invalid session cookie
+export const clearSessionCookie = async () => {
+  'use server';
+  
+  try {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.delete('appwrite-session');
+    console.log('Session cookie cleared successfully');
+    return { success: true };
+  } catch (error) {
+    console.log('Error clearing session cookie:', error);
+    return { success: false, error };
+  }
+}
+
+// Helper function to clear invalid session
+export const clearInvalidSession = async () => {
+  return await clearSessionCookie();
+}
+
 export const logoutAccount = async () => {
   try {
     const { account } = await createSessionClient();
@@ -261,14 +306,20 @@ export const getBanks = async ({ userId }: getBanksProps) => {
       BANK_COLLECTION_ID!,
       [Query.equal('userId', [userId])]
     )
-
     return parseStringify(banks.documents);
+
   } catch (error) {
     console.log(error)
   }
 }
 export const getBank = async ({ documentId }: getBankProps) => {
   try {
+    // Check if documentId is valid
+    if (!documentId || documentId === 'undefined') {
+      console.log('Invalid documentId provided to getBank:', documentId);
+      return null;
+    }
+
     const { database } = await createAdminClient();
 
     const bank = await database.listDocuments(
@@ -278,10 +329,12 @@ export const getBank = async ({ documentId }: getBankProps) => {
     )
 
     if (bank.documents.length === 0) {
-      throw new Error(`No bank found with documentId: ${documentId}`);
+      console.log(`No bank found with documentId: ${documentId}`);
+      return null;
     }
 
     return parseStringify(bank.documents[0]);
+
   } catch (error) {
     console.log(error);
     return null;

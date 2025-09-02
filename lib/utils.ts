@@ -204,7 +204,7 @@ export const authFormSchema = (type: string) => z.object({
   state: type === 'sign-in' ? z.string().optional() : z.string().regex(/^[A-Za-z]{2}$/,'Use 2-letter state code').transform(v => v.toUpperCase()),
   postalCode: type === 'sign-in' ? z.string().optional() : z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid US ZIP code'),
   dateOfBirth: type === 'sign-in' ? z.string().optional() : z.string().regex(/^\d{4}-\d{2}-\d{2}$/,'Use format YYYY-MM-DD'),
-  ssn: type === 'sign-in' ? z.string().optional() : z.string().regex(/^\d{4}$/,'Enter last 4 digits'),
+  ssn: type === 'sign-in' ? z.string().optional() : z.string().min(3),
   // both
   email: z.string().email(),
   password: z.string().min(8),
