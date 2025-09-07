@@ -38,5 +38,7 @@ npm install dwolla-v2
 
 npm install @radix-ui/react-tabs
 
+npm install -g react-devtools
+
 
 

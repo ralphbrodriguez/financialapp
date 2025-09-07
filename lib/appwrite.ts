@@ -17,7 +17,8 @@ export async function createSessionClient() {
   console.log("Retrieved session from cookies:", session ? "exists" : "missing");
 
   if (!session || !session.value) {
-    throw new Error("No session found - user needs to authenticate");
+    console.log("No session found - user needs to authenticate");
+    throw new Error("NO_SESSION");
   }
   
   console.log("Setting session on Appwrite client");
@@ -29,6 +30,17 @@ export async function createSessionClient() {
       return new Account(client);
     },
   };
+}
+
+// Helper function to check if session exists without throwing
+export async function hasValidSession(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get("appwrite-session");
+    return !!(session && session.value);
+  } catch (error) {
+    return false;
+  }
 }
 
 export async function createAdminClient() {

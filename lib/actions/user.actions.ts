@@ -110,6 +110,13 @@ export const getUserInfo = async ({ userId }: getUserInfoProps) => {
 }
 export async function getLoggedInUser() {
   try {
+    // First check if session exists to avoid throwing unnecessary errors
+    const { hasValidSession } = await import('@/lib/appwrite');
+    if (!(await hasValidSession())) {
+      console.log('No valid session found');
+      return null;
+    }
+
     const { account } = await createSessionClient();
   
     const result = await account.get();
@@ -129,26 +136,20 @@ export async function getLoggedInUser() {
 
     return parseStringify(user);
   } catch (error: any) {
-    // Handle session-related errors (expected for unauthenticated users)
-    if (error?.message?.includes('No session found') || 
-        error?.message?.includes('user needs to authenticate') ||
-        error?.message?.includes('No session')) {
-      console.log('No active session - user needs to sign in');
-      return null;
-    }
-    
     // Handle specific authentication errors more quietly
     if (error?.code === 401 || error?.type === 'general_unauthorized_scope') {
       console.log('Session expired or invalid - redirecting to sign-in');
       return null;
     }
     
-    // Log other unexpected errors (but less verbosely for expected auth issues)
-    if (error?.message?.includes('session') || error?.message?.includes('authenticate')) {
-      console.log('Authentication issue:', error?.message);
-    } else {
-      console.error('Unexpected error in getLoggedInUser:', error);
+    // Handle no session error
+    if (error?.message === 'NO_SESSION') {
+      console.log('No session cookie found - user needs to sign in');
+      return null;
     }
+    
+    // Log other unexpected errors
+    console.error('Unexpected error in getLoggedInUser:', error);
     return null;
   }
 }
@@ -194,7 +195,7 @@ export const createLinkToken = async (user: User) => {
         client_user_id: user.$id
       },
       client_name: `${user.firstName} ${user.lastName}`,
-      products: ['auth'] as Products[],
+      products: ['auth', 'transactions'] as Products[],
       language: 'en',
       country_codes: ['US'] as CountryCode[],
     }
