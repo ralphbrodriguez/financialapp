@@ -78,7 +78,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     }, 0);
 
     return parseStringify({ data: validAccounts, totalBanks, totalCurrentBalance });
-    s
+    
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
   }
@@ -144,9 +144,9 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     };
 
     // sort transactions by date such that the most recent transaction is first
-    const allTransactions = [...transactions].sort(
+    const allTransactions = Array.isArray(transactions) ? [...transactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    ) : [];
 
     return parseStringify({
       data: account,
@@ -154,6 +154,7 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     });
   } catch (error) {
     console.error("An error occurred while getting the account:", error);
+    throw error; // Re-throw the error so it can be handled by the caller
   }
 };
 
@@ -179,36 +180,84 @@ export const getInstitution = async ({
 export const getTransactions = async ({
   accessToken,
 }: getTransactionsProps) => {
-  let hasMore = true;
-  let transactions: any = [];
-
   try {
-    // Iterate through each page of new transaction updates for item
-    while (hasMore) {
-      const response = await plaidClient.transactionsSync({
-        access_token: accessToken,
-      });
-
-      const data = response.data;
-
-      transactions = response.data.added.map((transaction) => ({
-        id: transaction.transaction_id,
-        name: transaction.name,
-        paymentChannel: transaction.payment_channel,
-        type: transaction.payment_channel,
-        accountId: transaction.account_id,
-        amount: transaction.amount,
-        pending: transaction.pending,
-        category: transaction.category ? transaction.category[0] : "",
-        date: transaction.date,
-        image: transaction.logo_url,
-      }));
-
-      hasMore = data.has_more;
+    // Use the simpler transactionsGet endpoint for sandbox
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30); // Get last 30 days
+    
+    const endDate = new Date();
+    
+    console.log('Fetching transactions with access token:', accessToken ? 'present' : 'missing');
+    
+    if (!accessToken) {
+      console.log('No access token provided, returning empty transactions');
+      return [];
     }
+    
+    // Format dates properly for Plaid API
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    console.log('Transaction date range:', { startDate: startDateStr, endDate: endDateStr });
+    
+    const response = await plaidClient.transactionsGet({
+      access_token: accessToken,
+      start_date: startDateStr,
+      end_date: endDateStr,
+    });
+
+    console.log(`Successfully fetched ${response.data.transactions.length} transactions`);
+    
+    const transactions = response.data.transactions.map((transaction) => ({
+      id: transaction.transaction_id,
+      name: transaction.name,
+      paymentChannel: transaction.payment_channel,
+      type: transaction.payment_channel,
+      accountId: transaction.account_id,
+      amount: transaction.amount,
+      pending: transaction.pending,
+      category: transaction.category ? transaction.category[0] : "",
+      date: transaction.date,
+      image: transaction.logo_url,
+    }));
 
     return parseStringify(transactions);
-  } catch (error) {
-    console.error("An error occurred while getting the accounts:", error);
+  } catch (error: any) {
+    console.error("An error occurred while getting the transactions:", error);
+    
+    // Log additional error details for debugging
+    if (error.response) {
+      console.error("Error response details:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      });
+    } else if (error.message) {
+      console.error("Error message:", error.message);
+    } else {
+      console.error("Unknown error structure:", typeof error, error);
+    }
+    
+    // For sandbox/development, return mock transactions if API fails
+    if (process.env.NODE_ENV === 'development' && error.response?.status === 400) {
+      console.log('Returning mock transactions for development');
+      return parseStringify([
+        {
+          id: 'mock-transaction-1',
+          name: 'Mock Transaction',
+          paymentChannel: 'online',
+          type: 'online',
+          accountId: 'mock-account',
+          amount: -25.50,
+          pending: false,
+          category: 'Food and Drink',
+          date: new Date().toISOString().split('T')[0],
+          image: null,
+        }
+      ]);
+    }
+    
+    // Throw a proper error with details instead of returning empty array
+    throw new Error(`Failed to fetch transactions: ${error.message || 'Unknown error'}`);
   }
 };

@@ -23,7 +23,15 @@ const Home = async ({ searchParams }: SearchParamProps) => {
   const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;  
   
   // Only get account if we have a valid appwriteItemId
-  const account = appwriteItemId ? await getAccount({ appwriteItemId }) : null;
+  let account = null;
+  if (appwriteItemId) {
+    try {
+      account = await getAccount({ appwriteItemId });
+    } catch (error) {
+      console.error('Error fetching account details:', error);
+      // Continue with null account - the UI will handle this gracefully
+    }
+  }
   
   console.log('accounts',{accountsData, account, appwriteItemId});
   
