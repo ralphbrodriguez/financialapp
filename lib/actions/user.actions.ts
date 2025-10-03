@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { encryptId, extractCustomerIdFromUrl, parseStringify } from "../utils";
 import { CountryCode, ProcessorTokenCreateRequest, ProcessorTokenCreateRequestProcessorEnum, Products } from "plaid";
 
-import { plaidClient } from '../plaid';
+import { plaidClient } from '@/lib/plaid';
 import { revalidatePath } from "next/cache";
 import { addFundingSource, createDwollaCustomer } from "./dwolla.actions";
 
@@ -15,26 +15,43 @@ const {
   APPWRITE_USER_COLLECTION_ID: USER_COLLECTION_ID,
   APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
 } = process.env;
-export const signIn = async ({email, password} : signInProps) => {
-    try {
-        const { account } = await createAdminClient();
-        const session = await account.createEmailPasswordSession(email, password);
 
-        const cookieStore = await cookies();  
-        cookieStore.set("appwrite-session", session.secret, {
-          path: "/",
-          httpOnly: true,
-          sameSite: "strict",
-          secure: true,
-        });
-        
-        const user = await getUserInfo({ userId: session.userId });
+export const getUserInfo = async ({ userId }: getUserInfoProps) => {
+  try {
+    const { database } = await createAdminClient();
 
-        return parseStringify(user);
-    } catch (error) {
-        console.error('signIn Error:', error);
-    } 
+    const user = await database.listDocuments(
+      DATABASE_ID!,
+      USER_COLLECTION_ID!,
+      [Query.equal('userId', [userId])]
+    )
+
+    return parseStringify(user.documents[0]);
+  } catch (error) {
+    console.log(error)
+  }
 }
+
+export const signIn = async ({ email, password }: signInProps) => {
+  try {
+    const { account } = await createAdminClient();
+    const session = await account.createEmailPasswordSession(email, password);
+
+    (await cookies()).set("appwrite-session", session.secret, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "strict",
+      secure: true,
+    });
+
+    const user = await getUserInfo({ userId: session.userId }) 
+
+    return parseStringify(user);
+  } catch (error) {
+    console.error('Error', error);
+  }
+}
+
 export const signUp = async ({ password, ...userData }: SignUpParams) => {
   const { email, firstName, lastName } = userData;
   
@@ -75,8 +92,7 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     const session = await account.createEmailPasswordSession(email, password);
 
-    const cookieStore = await cookies();  
-    cookieStore.set("appwrite-session", session.secret, {
+    (await cookies()).set("appwrite-session", session.secret, {
       path: "/",
       httpOnly: true,
       sameSite: "strict",
@@ -88,106 +104,33 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
     console.error('Error', error);
   }
 }
-export const getUserInfo = async ({ userId }: getUserInfoProps) => {
-  try {
 
-    const { database } = await createAdminClient();
-
-    const user = await database.listDocuments(
-      DATABASE_ID!,
-      USER_COLLECTION_ID!,
-      [Query.equal('userId', [userId])]
-    )
-    console.log('userId', userId);
-    console.log('Fetched user documents:', user.documents[0]);
-
-    return parseStringify(user.documents[0]);
-
-  } catch (error) {
-    console.log('Error getUserInfo:', error);
-    return null;
-  }
-}
 export async function getLoggedInUser() {
   try {
-    // First check if session exists to avoid throwing unnecessary errors
-    const { hasValidSession } = await import('@/lib/appwrite');
-    if (!(await hasValidSession())) {
-      console.log('No valid session found');
-      return null;
-    }
-
     const { account } = await createSessionClient();
-  
     const result = await account.get();
-    console.log('getLoggedInUser: User authenticated successfully');
-    
-    if (!result?.$id) {
-      console.log('No user ID found in account result');
-      return null;
-    }
-    
-    const user = await getUserInfo({ userId: result.$id});
-    
-    if (!user) {
-      console.log('No user found in database for userId:', result.$id);
-      return null;
-    }
+
+    const user = await getUserInfo({ userId: result.$id})
 
     return parseStringify(user);
-  } catch (error: any) {
-    // Handle specific authentication errors more quietly
-    if (error?.code === 401 || error?.type === 'general_unauthorized_scope') {
-      console.log('Session expired or invalid - redirecting to sign-in');
-      return null;
-    }
-    
-    // Handle no session error
-    if (error?.message === 'NO_SESSION') {
-      console.log('No session cookie found - user needs to sign in');
-      return null;
-    }
-    
-    // Log other unexpected errors
-    console.error('Unexpected error in getLoggedInUser:', error);
+  } catch (error) {
+    console.log(error)
     return null;
   }
-}
-
-// Server Action to clear invalid session cookie
-export const clearSessionCookie = async () => {
-  'use server';
-  
-  try {
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    cookieStore.delete('appwrite-session');
-    console.log('Session cookie cleared successfully');
-    return { success: true };
-  } catch (error) {
-    console.log('Error clearing session cookie:', error);
-    return { success: false, error };
-  }
-}
-
-// Helper function to clear invalid session
-export const clearInvalidSession = async () => {
-  return await clearSessionCookie();
 }
 
 export const logoutAccount = async () => {
   try {
     const { account } = await createSessionClient();
-    
-    const cookieStore = await cookies();
-    cookieStore.delete('appwrite-session');
+
+    (await cookies()).delete('appwrite-session');
 
     await account.deleteSession('current');
-
   } catch (error) {
     return null;
   }
 }
+
 export const createLinkToken = async (user: User) => {
   try {
     const tokenParams = {
@@ -195,7 +138,7 @@ export const createLinkToken = async (user: User) => {
         client_user_id: user.$id
       },
       client_name: `${user.firstName} ${user.lastName}`,
-      products: ['auth', 'transactions'] as Products[],
+      products: ['auth'] as Products[],
       language: 'en',
       country_codes: ['US'] as CountryCode[],
     }
@@ -207,6 +150,7 @@ export const createLinkToken = async (user: User) => {
     console.log(error);
   }
 }
+
 export const createBankAccount = async ({
   userId,
   bankId,
@@ -237,6 +181,7 @@ export const createBankAccount = async ({
     console.log(error);
   }
 }
+
 export const exchangePublicToken = async ({
   publicToken,
   user,
@@ -298,6 +243,7 @@ export const exchangePublicToken = async ({
     console.error("An error occurred while creating exchanging token:", error);
   }
 }
+
 export const getBanks = async ({ userId }: getBanksProps) => {
   try {
     const { database } = await createAdminClient();
@@ -307,20 +253,15 @@ export const getBanks = async ({ userId }: getBanksProps) => {
       BANK_COLLECTION_ID!,
       [Query.equal('userId', [userId])]
     )
-    return parseStringify(banks.documents);
 
+    return parseStringify(banks.documents);
   } catch (error) {
     console.log(error)
   }
 }
+
 export const getBank = async ({ documentId }: getBankProps) => {
   try {
-    // Check if documentId is valid
-    if (!documentId || documentId === 'undefined') {
-      console.log('Invalid documentId provided to getBank:', documentId);
-      return null;
-    }
-
     const { database } = await createAdminClient();
 
     const bank = await database.listDocuments(
@@ -329,15 +270,26 @@ export const getBank = async ({ documentId }: getBankProps) => {
       [Query.equal('$id', [documentId])]
     )
 
-    if (bank.documents.length === 0) {
-      console.log(`No bank found with documentId: ${documentId}`);
-      return null;
-    }
+    return parseStringify(bank.documents[0]);
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+export const getBankByAccountId = async ({ accountId }: getBankByAccountIdProps) => {
+  try {
+    const { database } = await createAdminClient();
+
+    const bank = await database.listDocuments(
+      DATABASE_ID!,
+      BANK_COLLECTION_ID!,
+      [Query.equal('accountId', [accountId])]
+    )
+
+    if(bank.total !== 1) return null;
 
     return parseStringify(bank.documents[0]);
-
   } catch (error) {
-    console.log(error);
-    return null;
+    console.log(error)
   }
 }

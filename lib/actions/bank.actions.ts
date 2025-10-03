@@ -11,7 +11,7 @@ import {
 
 import { plaidClient } from "../plaid";
 import { parseStringify } from "../utils";
-//import { getTransactionsByBankId } from "./transaction.actions";
+import { getTransactionsByBankId } from "./transaction.actions";
 import { getBanks, getBank } from "./user.actions";
 
 // Get multiple bank accounts
@@ -105,11 +105,12 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     const accountData = accountsResponse.data.accounts[0];
 
     // get transfer transactions from appwrite
-/*     const transferTransactionsData = await getTransactionsByBankId({
+    const transferTransactionsData = await 
+      getTransactionsByBankId({
       bankId: bank.$id,
-    }); */
+    });
 
-/*     const transferTransactions = transferTransactionsData.documents.map(
+    const transferTransactions = transferTransactionsData.documents.map(
       (transferData: Transaction) => ({
         id: transferData.$id,
         name: transferData.name!,
@@ -119,7 +120,7 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
         category: transferData.category,
         type: transferData.senderBankId === bank.$id ? "debit" : "credit",
       })
-    ); */
+    );
 
     // get institution info from plaid
     const institution = await getInstitution({
@@ -144,9 +145,9 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     };
 
     // sort transactions by date such that the most recent transaction is first
-    const allTransactions = Array.isArray(transactions) ? [...transactions].sort(
+      const allTransactions = [...transactions, ...transferTransactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    ) : [];
+    );
 
     return parseStringify({
       data: account,
@@ -154,7 +155,6 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     });
   } catch (error) {
     console.error("An error occurred while getting the account:", error);
-    throw error; // Re-throw the error so it can be handled by the caller
   }
 };
 
@@ -216,7 +216,7 @@ export const getTransactions = async ({
       accountId: transaction.account_id,
       amount: transaction.amount,
       pending: transaction.pending,
-      category: transaction.category ? transaction.category[0] : "",
+      category: transaction.personal_finance_category?.primary || "default",
       date: transaction.date,
       image: transaction.logo_url,
     }));

@@ -63,8 +63,7 @@ const Home = async ({ searchParams }: SearchParamProps) => {
         </div>
       </section>
     );
-  }
-
+  }  
   return (
     <section className="home">
       <div className="home-content">
@@ -98,5 +97,6 @@ const Home = async ({ searchParams }: SearchParamProps) => {
       />
     </section>
   )
+  
 }
 export default Home

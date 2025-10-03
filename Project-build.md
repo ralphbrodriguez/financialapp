@@ -26,7 +26,7 @@ npm install react-chartjs-2
 npx shadcn@latest add sheet
 
 npm install zod
-npx shadcn@latest add sheet
+npx shadcn@latest add progress
 npx shadcn@latest add form
 npx shadcn@latest add input
 
@@ -40,5 +40,4 @@ npm install @radix-ui/react-tabs
 
 npm install -g react-devtools
 
-
-
+npm install @radix-ui/react-select
